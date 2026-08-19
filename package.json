@@ -1,0 +1,21 @@
+{
+  "name": "engineering",
+  "version": "1.0.0",
+  "description": "Project focus on covering and exploring most of all backend engineering concepts",
+  "license": "ISC",
+  "author": "Karthik K",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon src/app.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "pg": "^8.23.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
