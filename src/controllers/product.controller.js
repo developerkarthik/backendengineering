@@ -1,9 +1,17 @@
 const ApiError = require('../errors/ApiError');
 const productServices = require('../services/product.services');
 
-const getAllProducts = async (req, res, next) => {
+const getProducts = async (req, res, next) => {
     try{
-        const products = await productServices.fetchProducts();
+        const page = Number(req.query.page);
+        const limit = Number(req.query.limit);
+
+        if(!Number.isInteger(page) || !Number.isInteger(limit)){
+            throw new ApiError('Invalid page number or limit', 400);
+        }
+
+        const products = await productServices.fetchProducts(page, limit);
+
         res.status(200).json({
             status: 'ok',
             data: products
@@ -60,7 +68,6 @@ const createProduct = async (req, res, next) => {
 const updateProductById = async (req, res, next) => {
     try{
         const productId = Number(req.params.id);
-        console.log(productId);
         if(!Number.isInteger(productId) || productId < 0) {
             throw new ApiError(
                 'Product ID is not valid!',
@@ -81,12 +88,30 @@ const updateProductById = async (req, res, next) => {
     }catch(error){
         next(error)
     }
-
 }
 
+const deleteProduct = async (req, res, next) => {
+    try{
+        const productId = Number(req.params.id);
+
+        if(!Number.isInteger(productId) || productId <= 0){
+            throw new ApiError('ProductID is not valid', 400);
+        }
+
+        await productServices.deleteProduct(productId);
+
+        res.status(204).send();
+    }catch(error){
+        next(error)
+    }
+}
+
+
+
 module.exports = {
-    getAllProducts,
+    getProducts,
     getProductById,
     createProduct,
-    updateProductById
+    updateProductById,
+    deleteProduct,
 }

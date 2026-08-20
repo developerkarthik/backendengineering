@@ -23,9 +23,29 @@ const productSchema = z.object({
 
 const validateProduct = (req, res, next) => {
     //const {product} = req.body;
-
     const result = productSchema.safeParse(req.body);
+    
+    if (!result.success) {
+        // return res.status(400).json();
+        throw new ApiError(
+            'Product validation failed',
+            400,
+            {
+                status: 'VALIDATION_ERROR',
+                errors: result.error.issues
+            }
+        );
+    }
 
+    req.body = result.data;
+
+    next();
+}
+
+const validateProductPartial = (req, res, next) => {
+    //const {product} = req.body;
+    const result = productSchema.partial().safeParse(req.body);
+    
     if (!result.success) {
         // return res.status(400).json();
         throw new ApiError(
@@ -44,5 +64,6 @@ const validateProduct = (req, res, next) => {
 }
 
 module.exports = {
-    validateProduct
+    validateProduct,
+    validateProductPartial
 }

@@ -1,8 +1,14 @@
 const pool = require('../config/db');
 const ApiError = require('../errors/ApiError');
 
-const fetchAllProducts = async () => {
-    const result = await pool.query("SELECT * FROM PRODUCTS");
+const getTotalCount = async () => {
+    const result = await pool.query("SELECT COUNT(*) FROM products");
+    return result.rows[0].count;
+}
+const fetchProducts = async (limit, offset) => {
+
+    
+    const result = await pool.query("SELECT * FROM PRODUCTS ORDER BY id LIMIT $1 OFFSET $2", [limit, offset]);
 
     return result.rows;
 }
@@ -55,10 +61,28 @@ const updateProductById = async (productId, payload) => {
 
     return result.rows[0];
 }
+
+const deleteProduct = async (productId) => {
+    // authenication
+    // Foreign key impleication
+    // Production improvement
+    const query = `DELETE FROM products WHERE id=$1 RETURNING *`;
+
+    const result = await pool.query(query, [productId]);
+
+    if(result.rowCount === 0){
+        throw new ApiError("Product is not found", 404);
+    }
+    return;
+}
+
+
 module.exports = {
-    fetchAllProducts,
+    fetchProducts,
     fetchProductById,
     createNew,
     findByNameAndCategory,
-    updateProductById
+    updateProductById,
+    deleteProduct,
+    getTotalCount
 }
