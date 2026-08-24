@@ -1,28 +1,32 @@
 const ApiError = require('../errors/ApiError');
 const productRepository = require('../repositories/product.repository');
 
-const fetchPaginationData = async (page, limit) => {
+const fetchPaginationData = async (filters, page, limit,) => {
     
-    const total = await productRepository.getTotalCount();
-    const totalPages = Math.ceil(total/limit);
+    const total = await productRepository.getTotalCount(filters);
+    const DEFAULT_LIMIT = 20;
+    const MIN_LIMIT = 1;
+    const MAX_LIMIT = 100;
 
     //let validPage = Math.max(1, Math.min(page, totalPages)); // Should maintain the CONST for page & limit default 
-    let validLimit = Math.max(10, Math.min(limit, 30));
-
+    let validLimit = Math.max(MIN_LIMIT, Math.min(MAX_LIMIT, limit ?? DEFAULT_LIMIT));
+    const totalPages = Math.ceil(total/validLimit);
     const offset = (page - 1) * validLimit;
     
     return {
         total,
         totalPages,
         limit: validLimit,
-        page,
-        offset
+        page
     }
 }
 
-const fetchProducts = async (page, limit) => {
-    const paginationData = await fetchPaginationData(page, limit);
-    const products = await productRepository.fetchProducts(paginationData.limit, paginationData.offset);
+const fetchProducts = async (filters, page, limit, sortBy, sortOrder) => {
+    const paginationData = await fetchPaginationData(filters, page, limit);
+    let products = [];
+    if(page <= paginationData.totalPages) {
+        products = await productRepository.fetchProducts(filters, paginationData.limit, paginationData.offset, sortBy, sortOrder);
+    }
     
     return {
         products,

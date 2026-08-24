@@ -1,17 +1,22 @@
 const pool = require('../config/db');
 const ApiError = require('../errors/ApiError');
+const { createClause } = require('../utils/filters');
 
-const getTotalCount = async () => {
-    const result = await pool.query("SELECT COUNT(*) FROM products");
+const getTotalCount = async (filters) => {
+
+    const {whereClause, values} = createClause(filters);
+
+    const result = await pool.query(`SELECT COUNT(*) FROM products ${whereClause}`, [...values]);
+    
     return result.rows[0].count;
 }
-const fetchProducts = async (limit, offset) => {
-
-    
-    const result = await pool.query("SELECT * FROM PRODUCTS ORDER BY id LIMIT $1 OFFSET $2", [limit, offset]);
+const fetchProducts = async (filters, limit, offset, sortBy, sortOrder) => {
+    const {whereClause, values} = createClause(filters);
+    const NFilters = Object.keys(filters).length; 
+    const result = await pool.query(`SELECT * FROM PRODUCTS ${whereClause} ORDER BY ${sortBy} ${sortOrder} LIMIT $${NFilters+1} OFFSET $${NFilters+2}`, [...values, limit, offset]);
 
     return result.rows;
-}
+} 
 
 const fetchProductById = async (productId) => {
     const result = await pool.query('SELECT * FROM products WHERE id = $1', [productId]);
