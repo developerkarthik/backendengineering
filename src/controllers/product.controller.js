@@ -1,22 +1,19 @@
+const { DEFAULT_PAGE, DEFAULT_PAGE_LIMIT } = require('../constant/variables');
 const ApiError = require('../errors/ApiError');
 const productServices = require('../services/product.services');
 const { createFilters } = require('../utils/filters');
 
 const getProducts = async (req, res, next) => {
     try{
-        const page = Number(req.query.page || 1);
-        const limit = Number(req.query.limit || 20);
+        
+        const page = req.validPage;
+        const limit = req.validLimit;
         const sortBy = req.validSortBy;
 
         const sortOrder = req.validSortOrder;
 
         const filters = createFilters(req.validatedFilters);
         
-        // const isValidFilters = 
-        if(!Number.isInteger(page) || !Number.isInteger(limit)){
-            throw new ApiError('Invalid page number or limit', 400);
-        }
-
         const products = await productServices.fetchProducts(filters, page, limit, sortBy, sortOrder);
 
         res.status(200).json({

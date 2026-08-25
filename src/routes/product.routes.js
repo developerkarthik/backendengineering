@@ -1,12 +1,12 @@
 const express = require('express');
 const { getProducts, getProductById, createProduct, updateProductById, deleteProduct, replaceProductById } = require('../controllers/product.controller');
 const { validateProduct, validateProductPartial } = require('../validation/product');
-const { validateFilters, validateSorting } = require('../validation/filters');
+const { validateFilters, validateSorting, validatePagination } = require('../validation/filters');
 
 
 const productRouter = express.Router();
 
-productRouter.get('/', validateFilters,validateSorting, getProducts);
+productRouter.get('/', validatePagination, validateFilters,validateSorting, getProducts);
 
 productRouter.get('/:id', getProductById);
 

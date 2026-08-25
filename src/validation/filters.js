@@ -1,5 +1,6 @@
 const z = require('zod');
 const ApiError = require('../errors/ApiError');
+const { MAX_PAGE_LIMIT, DEFAULT_PAGE, DEFAULT_PAGE_LIMIT } = require('../constant/variables');
 
 const filterSchema = z.object({
     category: z.string().toLowerCase().optional(),
@@ -28,6 +29,7 @@ const validateSorting = (req, res, next) => {
     next();
 
 }
+
 const validateFilters = (req, res, next) => {
     const result = filterSchema.safeParse(req.query);
 
@@ -55,8 +57,26 @@ const validateFilters = (req, res, next) => {
     next();
 }
 
+const validatePagination = (req, res, next) => {
+    const page = Number(req.query.page ?? DEFAULT_PAGE);
+    const limit = Number(req.query.limit ?? DEFAULT_PAGE_LIMIT);
+
+    if(!Number.isInteger(page) || !Number.isInteger(limit) || page <= 0){
+        throw new ApiError('Invalid page number or limit', 400);
+    }
+
+    if(limit <= 0 && limit > MAX_PAGE_LIMIT) {
+        throw new ApiError('Limit must be between 1 and 100', 400);
+    }
+
+    req.validPage = page;
+    req.validLimit = limit;
+
+    next();
+}
 
 module.exports = {
     validateFilters,
-    validateSorting
+    validateSorting,
+    validatePagination
 }
