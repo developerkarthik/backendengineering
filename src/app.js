@@ -2,6 +2,7 @@ const express = require('express');
 const pool = require('./config/db');
 const productRouter = require('./routes/product.routes');
 const errorHandler = require('./middleware/errors.middleware');
+const orderRouter = require('./routes/order.routes');
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.get('/', async (req, res) => {
 });
 
 app.use('/api/products', productRouter)
+app.use('/api/orders', orderRouter);
 
 app.use(errorHandler);
 
