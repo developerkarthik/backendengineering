@@ -12,8 +12,8 @@ const createOrder = async (req, res, next) => {
             message: 'Order created '
         });
     }catch(error){
-        console.log('controller..');
-       next(error);
+        console.log(error);
+        next(error);
     }
 }
 

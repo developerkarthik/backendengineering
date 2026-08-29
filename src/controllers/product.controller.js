@@ -1,3 +1,4 @@
+const DBMSG = require('../config/DBErrorMapping');
 const { DEFAULT_PAGE, DEFAULT_PAGE_LIMIT } = require('../constant/variables');
 const ApiError = require('../errors/ApiError');
 const productServices = require('../services/product.services');
@@ -13,7 +14,7 @@ const getProducts = async (req, res, next) => {
         const sortOrder = req.validSortOrder;
 
         const filters = createFilters(req.validatedFilters);
-        
+
         const products = await productServices.fetchProducts(filters, page, limit, sortBy, sortOrder);
 
         res.status(200).json({

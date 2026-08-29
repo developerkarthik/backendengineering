@@ -1,6 +1,14 @@
+const DBMSG = require("../config/DBErrorMapping");
+
 const errorHandler = (err, req, res, next) => {
 
-    console.log(err);
+    if(err.code === '23505' || 
+        err.code === '23514' || 
+        err.code === '23503' || 
+        err.code === '23502'){
+        err.message = DBMSG[err.constraint] || 'Database violation.';
+        err.statusCode = err.code === '23505' ? 409 : 400;
+    }
 
     res.status(err.statusCode || 500).json({
         status: 'error',

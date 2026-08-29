@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const DBMSG = require("../config/DBErrorMapping");
 const ApiError = require("../errors/ApiError");
 const productRepository = require('./product.repository');
 
@@ -76,6 +77,7 @@ const orderTransaction = async (payload) => {
         return true;
     }catch(error){
         await client.query('ROLLBACK');
+
         throw error;
     } finally{
         client.release();
