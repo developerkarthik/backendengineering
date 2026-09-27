@@ -15,6 +15,14 @@ const authenticate = async (req, res, next) => {
     try{
         const token = req.cookies.access_token;
 
+        console.log(token);
+
+        if(!token){
+            return res.status(401).json({
+                message: 'unauthenticated!'
+            })
+        }
+
         const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
         
         req.user = decoded;
@@ -22,6 +30,7 @@ const authenticate = async (req, res, next) => {
         next();
         
     }catch(error){
+        console.log(error);
         next(error)
     }
 }
