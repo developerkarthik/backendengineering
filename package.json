@@ -8,7 +8,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon --env-file=.env src/app.js"
+    "start": "nodemon --env-file=.env src/app.js",
+    "lint": "eslint . --max-warnings=0"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -20,6 +21,8 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.11.0",
     "nodemon": "^3.1.14"
   }
 }
