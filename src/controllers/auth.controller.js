@@ -24,7 +24,7 @@ const registerController = async (req, res, next) => {
         const { username, password } = req.body;
         await authServices.userRegister(username, password);
         res.status(200).json({
-            message: 'User login successfully!'
+            message: 'User account created!'
         });
     }catch(error){
         next(error);

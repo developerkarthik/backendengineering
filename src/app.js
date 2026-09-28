@@ -5,6 +5,7 @@ const errorHandler = require('./middleware/errors.middleware');
 const orderRouter = require('./routes/order.routes');
 const authRouter = require('./routes/auth.routes');
 const cookieParser = require('cookie-parser');
+const userRouter = require('./routes/user.routes');
 
 const app = express();
 
@@ -52,7 +53,7 @@ app.use('/api/products', productRouter)
 app.use('/api/orders', orderRouter);
 
 app.use('/auth', authRouter)
-
+app.use('/api/users', userRouter);
 
 app.use(errorHandler);
 
