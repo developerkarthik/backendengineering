@@ -1,11 +1,11 @@
 const OrderRepository = require("../repositories/order.repository");
-const { placeOrder } = require("../services/order.services");
+const orderServices = require("../services/order.services");
 
 const createOrder = async (req, res, next) => {
     try{
 
         // I need to check the corner cases, to validate the client data because it is not trustable one.
-        const result = await placeOrder(req.body);
+        const result = await orderServices.placeOrder(req.body);
 
         res.status(201).json({
             status: 'ok',
@@ -17,6 +17,24 @@ const createOrder = async (req, res, next) => {
     }
 }
 
+const getOrderById = async (req, res, next) => {
+    try{
+        const {role, id} = req.user;
+
+        const order_id = req.params.id;
+
+        const result = await orderServices.getOrderById(order_id, id , role);
+
+        res.status(200).json({
+            data: result
+        });
+    }catch(error){
+        next(error);
+    }
+    
+}
+
 module.exports = {
-    createOrder
+    createOrder,
+    getOrderById
 }
