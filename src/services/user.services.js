@@ -5,6 +5,13 @@ const getAllUsers = async () => {
     return result;
 }
 
+const getUserById = async (userId) => {
+    const user = await userRepository.getUserById(userId);
+    
+    return user;
+    
+}
+
 module.exports = {
     getAllUsers
 }

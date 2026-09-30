@@ -26,8 +26,8 @@ const getRole = async (role_id) => {
 
     const response = await pool.query(query, [role_id]);
 
-    console.log(response);
-    return response.rows[0];
+    //console.log(response);
+    return response.rows.length > 0 ? response.rows[0] : null;
 }
 
 const getPermissionsLevel = async (username) => {
@@ -38,15 +38,45 @@ const getPermissionsLevel = async (username) => {
                     WHERE u.name = $1`;
     const response = await pool.query(query, [username]);
 
-    console.log(response.rows);
+    //console.log(response.rows);
 
     return response.rows;
 }
+
+const insertRefreshToken = async (user_id, token_id, expiresAt) => {
+    const query = `INSERT INTO refresh_tokens(user_id, token_id, expires_at) VALUES($1, $2, $3)`;
+
+    const response = await pool.query(query, [user_id, token_id, expiresAt]);
+
+    return response.rows[0];
+}
+
+const validRefreshToken = async (user_id, jti) => {
+    const query = `SELECT * FROM refresh_tokens WHERE user_id=$1 AND token_id=$2`;
+    const response = await pool.query(query, [user_id, jti]);
+
+    return response.rows[0];
+}
+
+const revokeRefreshToken = async (user_id, token_id) => {
+    const query = `UPDATE refresh_tokens SET revoked_at=NOW() 
+                        WHERE user_id=$1 
+                            AND token_id=$2
+                            AND revoked_at IS NULL
+                            AND expires_at > NOW() 
+                            RETURNING user_id`;
+    const response = await pool.query(query, [user_id, token_id]);
+    return response.rows[0];
+}
+
 
 module.exports = {
     checkUser,
     userRegister,
     getRole,
-    getPermissionsLevel
+    getPermissionsLevel,
+    insertRefreshToken,
+    validRefreshToken,
+    revokeRefreshToken
 }
 
