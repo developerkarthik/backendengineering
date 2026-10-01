@@ -13,13 +13,7 @@ const regenerateTokens = async (id, jti) => {
     if(!user){
         throw new ApiError("User doesn't exists", 404);
     }
-    // Check the refresh token is active or not. (token_id, userId)
-    const isTokenActive = await authRepository.validRefreshToken(id, jti);
-    // console.log(isTokenActive);
-    if(isTokenActive.revoked_at){
-        throw new ApiError('Refresh token is already revoked/theft. Please login again', 401);
-    }
-
+    
     const role = await authRepository.getRole(user.role_id);
 
     if(!role){
@@ -33,27 +27,8 @@ const regenerateTokens = async (id, jti) => {
         id: user.id,
         role: role.name
     });
-
-    const token_id = crypto.randomUUID();
-    const expiresAt = new Date(
-                Date.now() + 7 * 24 * 60 * 60 * 1000
-            );
-    const refreshToken = generateRefreshToken({
-        sub: user.name,
-        id: user.id,
-        jti: token_id
-    });
-
-    const revoked = await authRepository.revokeRefreshToken(id, jti);
-    if (!revoked) {
-        throw new ApiError(
-            'Refresh token is invalid, expired, or already used',
-            401
-        );
-    }
-
-    await authRepository.insertRefreshToken(id, token_id, expiresAt);
-
+    
+    const refreshToken = await authRepository.tokenTransaction(user, jti);
 
     return {
         accessToken,

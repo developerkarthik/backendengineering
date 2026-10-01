@@ -1,4 +1,8 @@
 const pool = require('../config/db');
+const crypto = require('node:crypto');
+const jwt = require('jsonwebtoken');
+const { generateRefreshToken } = require('../utils/auth');
+const ApiError = require('../errors/ApiError');
 
 const checkUser = async (username) => {
     const query = `SELECT * FROM users WHERE name=$1`
@@ -43,10 +47,10 @@ const getPermissionsLevel = async (username) => {
     return response.rows;
 }
 
-const insertRefreshToken = async (user_id, token_id, expiresAt) => {
+const insertRefreshToken = async (client, user_id, token_id, expiresAt) => {
     const query = `INSERT INTO refresh_tokens(user_id, token_id, expires_at) VALUES($1, $2, $3)`;
 
-    const response = await pool.query(query, [user_id, token_id, expiresAt]);
+    const response = await client.query(query, [user_id, token_id, expiresAt]);
 
     return response.rows[0];
 }
@@ -58,17 +62,54 @@ const validRefreshToken = async (user_id, jti) => {
     return response.rows[0];
 }
 
-const revokeRefreshToken = async (user_id, token_id) => {
+const revokeRefreshToken = async (client, user_id, jti) => {
     const query = `UPDATE refresh_tokens SET revoked_at=NOW() 
                         WHERE user_id=$1 
                             AND token_id=$2
                             AND revoked_at IS NULL
                             AND expires_at > NOW() 
                             RETURNING user_id`;
-    const response = await pool.query(query, [user_id, token_id]);
-    return response.rows[0];
+    return await client.query(query, [user_id, jti]);
 }
 
+
+const tokenTransaction = async (user, jti ) => {
+    const client = await pool.connect();
+
+    try{
+        
+        await client.query('BEGIN');
+
+        const revoked = await revokeRefreshToken(client, user.id, jti);
+        console.log(revoked, jti);
+        if(revoked.rowCount === 0){
+            throw new ApiError('Refresh token is invalid or already used', 401);
+        }
+
+        const token_id = crypto.randomUUID();
+        const refreshToken = generateRefreshToken({
+            sub: user.name,
+            id: user.id,
+            jti: token_id
+        });
+
+        const decoded = jwt.decode(refreshToken);
+        const expiresAt = new Date(decoded.exp * 1000);
+
+        await insertRefreshToken(client, user.id, token_id, expiresAt);
+
+
+        await client.query('COMMIT');
+
+        return refreshToken;
+    }catch(error){
+        await client.query('ROLLBACK');
+
+        throw error;
+    }finally{
+        client.release();
+    }
+}
 
 module.exports = {
     checkUser,
@@ -77,6 +118,7 @@ module.exports = {
     getPermissionsLevel,
     insertRefreshToken,
     validRefreshToken,
-    revokeRefreshToken
+    revokeRefreshToken,
+    tokenTransaction
 }
 
