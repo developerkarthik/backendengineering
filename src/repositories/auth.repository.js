@@ -47,10 +47,11 @@ const getPermissionsLevel = async (username) => {
     return response.rows;
 }
 
-const insertRefreshToken = async (client, user_id, token_id, expiresAt) => {
-    const query = `INSERT INTO refresh_tokens(user_id, token_id, expires_at) VALUES($1, $2, $3)`;
+const insertRefreshToken = async (user_id, token_id, expiresAt, family_id, client = pool) => {
+    const query = `INSERT INTO refresh_tokens(user_id, token_id, expires_at, family_id) VALUES($1, $2, $3, $4)`;
 
-    const response = await client.query(query, [user_id, token_id, expiresAt]);
+    console.log(user_id, token_id, expiresAt, family_id);
+    const response = await client.query(query, [user_id, token_id, expiresAt, family_id]);
 
     return response.rows[0];
 }
@@ -62,13 +63,13 @@ const validRefreshToken = async (user_id, jti) => {
     return response.rows[0];
 }
 
-const revokeRefreshToken = async (client, user_id, jti) => {
+const revokeRefreshToken = async (user_id, jti, client = pool) => {
     const query = `UPDATE refresh_tokens SET revoked_at=NOW() 
                         WHERE user_id=$1 
                             AND token_id=$2
                             AND revoked_at IS NULL
                             AND expires_at > NOW() 
-                            RETURNING user_id`;
+                            RETURNING user_id, family_id`;
     return await client.query(query, [user_id, jti]);
 }
 
@@ -80,8 +81,9 @@ const tokenTransaction = async (user, jti ) => {
         
         await client.query('BEGIN');
 
-        const revoked = await revokeRefreshToken(client, user.id, jti);
-        console.log(revoked, jti);
+        const revoked = await revokeRefreshToken(user.id, jti, client);
+        
+        //console.log(revoked, jti);
         if(revoked.rowCount === 0){
             throw new ApiError('Refresh token is invalid or already used', 401);
         }
@@ -96,7 +98,9 @@ const tokenTransaction = async (user, jti ) => {
         const decoded = jwt.decode(refreshToken);
         const expiresAt = new Date(decoded.exp * 1000);
 
-        await insertRefreshToken(client, user.id, token_id, expiresAt);
+        const family_id = revoked.rows[0].family_id;
+        
+        await insertRefreshToken(user.id, token_id, expiresAt, family_id, client);
 
 
         await client.query('COMMIT');
@@ -111,6 +115,16 @@ const tokenTransaction = async (user, jti ) => {
     }
 }
 
+const getLegacySession = async (user_id, token_id) => {
+    const query = `SELECT is_legacy_session FROM refresh_tokens WHERE user_id=$1 AND token_id=$2`;
+
+    const response = await pool.query(query, [user_id, token_id]);
+
+    console.log(response);
+    return response.rows[0];
+}
+
+
 module.exports = {
     checkUser,
     userRegister,
@@ -119,6 +133,7 @@ module.exports = {
     insertRefreshToken,
     validRefreshToken,
     revokeRefreshToken,
-    tokenTransaction
+    tokenTransaction,
+    getLegacySession
 }
 

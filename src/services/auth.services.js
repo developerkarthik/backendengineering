@@ -28,6 +28,7 @@ const regenerateTokens = async (id, jti) => {
         role: role.name
     });
     
+    await checkLegacySession(id, jti);
     const refreshToken = await authRepository.tokenTransaction(user, jti);
 
     return {
@@ -72,8 +73,10 @@ const userLogin = async (username, password) => {
         jti: token_id
     });
 
-    console.log(token_id);
-    await authRepository.insertRefreshToken(response[0].id, token_id, expiresAt);
+    // console.log(token_id);
+    const family_id = crypto.randomUUID();
+
+    await authRepository.insertRefreshToken(response[0].id, token_id, expiresAt, family_id);
         //console.log(token);
 
     //console.log(token);
@@ -90,10 +93,21 @@ const getUserPermissions = async (subject) => {
     return result.map(res => res.name);
 }
 
+const checkLegacySession = async (user_id, token_id) => {
+    console.log(user_id, token_id);
+    const result = await authRepository.getLegacySession(user_id, token_id);
+
+    //console
+    if(result.is_legacy_session){
+        throw new ApiError('[Legacy] Session expired/invalid. Please login again', 401);
+    }
+    return true;
+}
 
 module.exports = {
     userLogin,
     userRegister,
     getUserPermissions,
-    regenerateTokens
+    regenerateTokens,
+    checkLegacySession
 }
