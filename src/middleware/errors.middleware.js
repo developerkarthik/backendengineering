@@ -10,6 +10,7 @@ const errorHandler = (err, req, res, next) => {
         err.statusCode = err.code === '23505' ? 409 : 400;
     }
 
+    console.log(err);
     res.status(err.statusCode || 500).json({
         status: 'error',
         message: err.message || 'Unexpected server error',

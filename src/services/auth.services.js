@@ -13,13 +13,7 @@ const regenerateTokens = async (id, jti) => {
     if(!user){
         throw new ApiError("User doesn't exists", 404);
     }
-    // Check the refresh token is active or not. (token_id, userId)
-    const isTokenActive = await authRepository.validRefreshToken(id, jti);
-    // console.log(isTokenActive);
-    if(isTokenActive.revoked_at){
-        throw new ApiError('Refresh token is already revoked/theft. Please login again', 401);
-    }
-
+    
     const role = await authRepository.getRole(user.role_id);
 
     if(!role){
@@ -33,27 +27,9 @@ const regenerateTokens = async (id, jti) => {
         id: user.id,
         role: role.name
     });
-
-    const token_id = crypto.randomUUID();
-    const expiresAt = new Date(
-                Date.now() + 7 * 24 * 60 * 60 * 1000
-            );
-    const refreshToken = generateRefreshToken({
-        sub: user.name,
-        id: user.id,
-        jti: token_id
-    });
-
-    const revoked = await authRepository.revokeRefreshToken(id, jti);
-    if (!revoked) {
-        throw new ApiError(
-            'Refresh token is invalid, expired, or already used',
-            401
-        );
-    }
-
-    await authRepository.insertRefreshToken(id, token_id, expiresAt);
-
+    
+    await checkLegacySession(id, jti);
+    const refreshToken = await authRepository.tokenTransaction(user, jti);
 
     return {
         accessToken,
@@ -97,8 +73,10 @@ const userLogin = async (username, password) => {
         jti: token_id
     });
 
-    console.log(token_id);
-    await authRepository.insertRefreshToken(response[0].id, token_id, expiresAt);
+    // console.log(token_id);
+    const family_id = crypto.randomUUID();
+
+    await authRepository.insertRefreshToken(response[0].id, token_id, expiresAt, family_id);
         //console.log(token);
 
     //console.log(token);
@@ -115,10 +93,21 @@ const getUserPermissions = async (subject) => {
     return result.map(res => res.name);
 }
 
+const checkLegacySession = async (user_id, token_id) => {
+    console.log(user_id, token_id);
+    const result = await authRepository.getLegacySession(user_id, token_id);
+
+    //console
+    if(result.is_legacy_session){
+        throw new ApiError('[Legacy] Session expired/invalid. Please login again', 401);
+    }
+    return true;
+}
 
 module.exports = {
     userLogin,
     userRegister,
     getUserPermissions,
-    regenerateTokens
+    regenerateTokens,
+    checkLegacySession
 }

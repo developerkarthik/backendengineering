@@ -69,13 +69,22 @@ const registerController = async (req, res, next) => {
     }
 }
 
-const getUser = (req, res) => {
-    const user = req.user;
+const getUser = async (req, res, next) => {
+    try{
+        const user = req.user;
+        const decoded = jwt.verify(req.cookies.refresh_token, process.env.JWT_REFRESH_TOKEN_KEY);
+        
+        await authServices.checkLegacySession(user.id, decoded.jti);
 
-    //console.log(user);
-    return res.status(200).json({
-        data: user
-    })
+
+        //console.log(user);
+        return res.status(200).json({
+            data: user
+        })
+    }catch(error){
+        next(error);
+    }
+    
 }
 
 
