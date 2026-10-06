@@ -99,7 +99,7 @@ const tokenTransaction = async (user, jti ) => {
         const expiresAt = new Date(decoded.exp * 1000);
 
         const family_id = revoked.rows[0].family_id;
-        
+
         await insertRefreshToken(user.id, token_id, expiresAt, family_id, client);
 
 
@@ -115,13 +115,45 @@ const tokenTransaction = async (user, jti ) => {
     }
 }
 
-const getLegacySession = async (user_id, token_id) => {
-    const query = `SELECT is_legacy_session FROM refresh_tokens WHERE user_id=$1 AND token_id=$2`;
+const getTokenDetail = async (user_id, token_id) => {
+    const query = `SELECT * FROM refresh_tokens WHERE user_id=$1 AND token_id=$2`;
 
     const response = await pool.query(query, [user_id, token_id]);
 
     console.log(response);
     return response.rows[0];
+}
+
+const getFamilyByUserIdAndToken = (user_id, token_id) => {
+    console.log(user_id, token_id);
+    const query = `SELECT family_id FROM refresh_tokens 
+                        WHERE user_id=$1 AND token_id=$2`;
+    const response = pool.query(query, [user_id, token_id]);
+
+    console.log(response);
+    return response;
+}
+
+const revokeTokenByFamilyId = async (user_id, family_id) => {
+    const query = `UPDATE refresh_tokens SET revoked_at=NOW() 
+                        WHERE user_id=$1 
+                        AND family_id=$2 
+                        AND revoked_at IS NULL`;
+
+    const response = await pool.query(query, [user_id, family_id]);
+
+    return response;
+}
+
+const revokeTokenByUserId = async (user_id) => {
+    const query = `UPDATE refresh_tokens SET revoked_at=NOW() 
+                        WHERE user_id=$1 
+                        AND revoked_at IS NULL 
+                        AND expires_at > NOW()`;
+
+    const response = await pool.query(query, [user_id]);
+
+    return response;
 }
 
 
@@ -134,6 +166,9 @@ module.exports = {
     validRefreshToken,
     revokeRefreshToken,
     tokenTransaction,
-    getLegacySession
+    getTokenDetail,
+    revokeTokenByFamilyId,
+    revokeTokenByUserId,
+    getFamilyByUserIdAndToken
 }
 
