@@ -69,12 +69,45 @@ const registerController = async (req, res, next) => {
     }
 }
 
+const logoutController = async (req, res, next) => {
+    try{
+        const { id, jti} = req.user;
+
+        await authServices.logoutSession(id, jti);
+        res.clearCookie("access_token");
+        res.clearCookie("refresh_token");
+
+        return res.status(200).json({
+            message: "Logged out successfully"
+        });
+    }catch(error){
+        next(error);
+    }
+}
+
+
+const logoutAllController = async (req, res, next) => {
+    try{
+        const { id } = req.user;
+
+        await authServices.logoutAllSession(id);
+        res.clearCookie("access_token");
+        res.clearCookie("refresh_token");
+
+        return res.status(200).json({
+            message: "Logged out successfully"
+        });
+    }catch(error){
+        next(error);
+    }
+}
+
 const getUser = async (req, res, next) => {
     try{
         const user = req.user;
         const decoded = jwt.verify(req.cookies.refresh_token, process.env.JWT_REFRESH_TOKEN_KEY);
         
-        await authServices.checkLegacySession(user.id, decoded.jti);
+        await authServices.checkSessionValid(user.id, decoded.jti);
 
 
         //console.log(user);
@@ -93,5 +126,7 @@ module.exports = {
     loginController,
     registerController,
     getUser,
-    generateNewTokens
+    generateNewTokens,
+    logoutController,
+    logoutAllController
 }

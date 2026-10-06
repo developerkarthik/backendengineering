@@ -93,14 +93,44 @@ const getUserPermissions = async (subject) => {
     return result.map(res => res.name);
 }
 
-const checkLegacySession = async (user_id, token_id) => {
-    console.log(user_id, token_id);
-    const result = await authRepository.getLegacySession(user_id, token_id);
+const checkSessionValid = async (user_id, token_id) => {
+    // console.log(user_id, token_id);
+    const result = await authRepository.getTokenDetail(user_id, token_id);
 
     //console
     if(result.is_legacy_session){
         throw new ApiError('[Legacy] Session expired/invalid. Please login again', 401);
     }
+
+    if(result.revoked_at !== null){
+        throw new ApiError('Session expired. Please login again', 401);
+    }
+
+    return true;
+}
+
+
+const logoutSession = async (user_id, token_id) => {
+    const familyResult = await authRepository.getFamilyByUserIdAndToken(user_id, token_id);
+
+    if(familyResult.rowCount === 0){
+        throw new ApiError('Family ID is missing. So, please login again', 401);
+    }
+
+    await authRepository.revokeTokenByFamilyId(user_id, familyResult.rows[0].family_id);
+
+    return true;
+}
+
+const logoutAllSession = async (user_id) => {
+    const result = await authRepository.revokeTokenByUserId(user_id);
+
+    if(result.rowCount === 0){
+        throw new ApiError('Already revoked!. Please login again', 401);
+    }
+
+    //await authRepository.revokeTokenByFamilyId(user_id, familyResult.rows[0].family_id);
+
     return true;
 }
 
@@ -109,5 +139,7 @@ module.exports = {
     userRegister,
     getUserPermissions,
     regenerateTokens,
-    checkLegacySession
+    checkSessionValid,
+    logoutSession,
+    logoutAllSession
 }
