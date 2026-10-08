@@ -28,7 +28,7 @@ const regenerateTokens = async (id, jti) => {
         role: role.name
     });
     
-    await checkLegacySession(id, jti);
+    await checkSessionValid(id, jti);
     const refreshToken = await authRepository.tokenTransaction(user, jti);
 
     return {

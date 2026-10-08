@@ -6,11 +6,14 @@ const orderRouter = require('./routes/order.routes');
 const authRouter = require('./routes/auth.routes');
 const cookieParser = require('cookie-parser');
 const userRouter = require('./routes/user.routes');
+const { validateCsrfToken } = require('./middleware/csrf.middleware');
+const validateOrigin = require('./middleware/origin.middleware');
 
 const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
+
 
 app.disable('x-powered-by');
 
@@ -36,7 +39,7 @@ app.use((req, res, next) => {
 
     res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
     res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-CSRF-Token");
     
     if(req.method === 'OPTIONS'){
         return res.status(204).end()
@@ -48,11 +51,16 @@ app.get('/', async (req, res) => {
         message: 'root call'
     });
 });
+app.use('/auth', authRouter);
+
+app.use(validateOrigin);
+app.use(validateCsrfToken);
+
 
 app.use('/api/products', productRouter)
 app.use('/api/orders', orderRouter);
 
-app.use('/auth', authRouter)
+
 app.use('/api/users', userRouter);
 
 app.use(errorHandler);

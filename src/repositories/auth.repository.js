@@ -130,7 +130,7 @@ const getFamilyByUserIdAndToken = (user_id, token_id) => {
                         WHERE user_id=$1 AND token_id=$2`;
     const response = pool.query(query, [user_id, token_id]);
 
-    console.log(response);
+    //console.log(response);
     return response;
 }
 
