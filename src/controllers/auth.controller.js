@@ -3,6 +3,9 @@ const authServices = require('../services/auth.services');
 const ApiError = require('../errors/ApiError');
 
 
+const attempts = new Map(); // In Memory for brute force protection
+
+
 const generateNewTokens = async (req, res, next) => {
     try{
         const { id, jti} = req.user;
@@ -12,14 +15,14 @@ const generateNewTokens = async (req, res, next) => {
         res.cookie("access_token", accessToken, {
             httpOnly: true,
             secure:true,
-            sameSite: 'strict',
+            sameSite: 'strict', // CSRF protection - level 1
             maxAge: 15 * 60 * 1000
         })
 
         res.cookie("refresh_token", refreshToken, {
             httpOnly: true,
             secure:true,
-            sameSite: 'strict',
+            sameSite: 'strict', // CSRF protection - level 1
             maxAge: 7 * 24 * 60 * 60 * 1000
         })
 
@@ -35,17 +38,19 @@ const loginController = async (req, res, next) => {
     try{
        const { username, password } = req.body;
        const result = await authServices.userLogin(username, password);
+
+       attempts.delete(username);
        res.cookie("access_token", result.accessToken, {
         httpOnly: true,
         secure:true,
-        sameSite: 'strict',
+        sameSite: 'strict', // CSRF protection - level 1
         maxAge: 15 * 60 * 1000
        })
 
        res.cookie("refresh_token", result.refreshToken, {
         httpOnly: true,
         secure:true,
-        sameSite: 'strict',
+        sameSite: 'strict', // CSRF protection - level 1
         maxAge: 7 * 24 * 60 * 60 * 1000
        })
 
@@ -53,6 +58,33 @@ const loginController = async (req, res, next) => {
             message: 'Login successfully!'
         });
     }catch(error){
+        //console.log(error)
+        if(error.statusCode === 401){
+            const name = req.body.username;
+            const now = Date.now();
+            const WINDOW = 15 * 60 * 1000;
+
+            const previous = attempts.get(name);
+
+            if(!previous || now - previous?.attemptedAt > WINDOW){
+                attempts.set(name, {
+                    count: 1,
+                    attemptedAt: now
+                });    
+            }else{
+                const count = previous.count + 1;
+                attempts.set(name, {
+                    count,
+                   attemptedAt: previous.attemptedAt
+                });
+
+                if(count > 5){
+                    return next(new ApiError("Too many login attempts", 429));
+                }
+            }
+
+            //console.log(attempts);
+        }
         next(error);
     }
 }
