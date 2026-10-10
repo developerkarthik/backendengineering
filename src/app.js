@@ -8,6 +8,7 @@ const cookieParser = require('cookie-parser');
 const userRouter = require('./routes/user.routes');
 const { validateCsrfToken } = require('./middleware/csrf.middleware');
 const validateOrigin = require('./middleware/origin.middleware');
+const redisClient = require('./config/redis');
 
 const app = express();
 
@@ -70,6 +71,10 @@ async function startServer(){
         const dbconnect = await pool.query("SELECT 1");
         console.log("DB connected successfully!");
 
+        const redis = await redisClient.connect();
+
+        console.log("Redis client connected successfully!");
+        
         app.listen(8000, ()  => {
             console.log("Express application is listening on 8000");
         })
