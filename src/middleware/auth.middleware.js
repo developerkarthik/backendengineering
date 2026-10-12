@@ -3,9 +3,10 @@ const jwt = require('jsonwebtoken');
 const ApiError = require('../errors/ApiError');
 const authRepository = require('../repositories/auth.repository');
 const authServices = require('../services/auth.services');
+const userServices = require('../services/user.services');
 
 
-const validateRefreshToken = (req, res, next) => {
+const validateRefreshToken = async (req, res, next) => {
     const refreshToken = req.cookies.refresh_token;
 
     if(!refreshToken){
@@ -16,6 +17,9 @@ const validateRefreshToken = (req, res, next) => {
 
     //console.log(decoded);
     req.user = decoded;
+
+    console.log(req.user);
+    await checkAccountEnabled(req.user.sub);
 
     next();
     
@@ -49,6 +53,8 @@ const authenticate = async (req, res, next) => {
         
         req.user = decoded;
 
+        await checkAccountEnabled(req.user.sub);
+
         next();
         
     }catch(error){
@@ -57,23 +63,24 @@ const authenticate = async (req, res, next) => {
     }
 }
 
+const checkAccountEnabled = async (username) => {
+    const isAccountEnabled = await userServices.getUserIsActive(username);
+
+    if(!isAccountEnabled){
+        throw new ApiError('Account is disabled/inactive', 403);
+    }
+}
+
 const authorize = (allowedPermissions) => {
     return async (req, res, next) => {
         const subject = req.user.sub;
 
         const userPermissions = await authServices.getUserPermissions(subject)
-        
-        //console.log(userPermissions);
-        //const hasPermission = allowedPermissions.every(permission => userPermissions.includes(permission))
         const hasPermission = userPermissions.includes(allowedPermissions)
 
         if(!hasPermission){
             throw new ApiError("You don't have a permission!", 403);
         }
-
-        // if(!allowedRoles.includes(role)){
-        //     throw new ApiError("You don't have a permission!", 403);
-        // }
 
         next();
     }

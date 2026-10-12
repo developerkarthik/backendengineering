@@ -5,13 +5,24 @@ const getAllUsers = async () => {
     return result;
 }
 
+const getUserIsActive = async (username) => {
+    return await userRepository.getUserIsActive(username);
+}
+
 const getUserById = async (userId) => {
     const user = await userRepository.getUserById(userId);
     
     return user;
-    
+}
+
+const updateUserStatus = async (userId, status) => {
+    const user = await userRepository.updateUserStatus(userId, status);
+    return user;
 }
 
 module.exports = {
-    getAllUsers
+    getAllUsers,
+    updateUserStatus,
+    getUserById,
+    getUserIsActive
 }

@@ -14,6 +14,7 @@ authRouter.post('/login', generateCsrfToken, loginController);
 
 authRouter.post('/register', hashPassword, registerController);
 
+
 authRouter.get('/me', authenticate, getUser);
 
 authRouter.post('/refresh', validateOrigin, validateCsrfToken, validateRefreshToken, generateNewTokens);
