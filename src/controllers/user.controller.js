@@ -15,6 +15,7 @@ const getAllUser = async (req, res, next) => {
     }
 }
 
+
 module.exports = {
     getAllUser
 }

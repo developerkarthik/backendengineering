@@ -1,10 +1,10 @@
 const jwt = require('jsonwebtoken');
 const authServices = require('../services/auth.services');
+const userServices = require('../services/user.services');
+
 const ApiError = require('../errors/ApiError');
 const { recordFailedLogin, clearFailedLogins, recoredFailedLoginIp } = require('../services/rateLimit.service');
 
-const attempts = new Map(); // In Memory for brute force protection
-const WINDOW = 15 * 60 * 1000;
 
 const generateNewTokens = async (req, res, next) => {
     try{
@@ -37,28 +37,19 @@ const generateNewTokens = async (req, res, next) => {
 const loginController = async (req, res, next) => {
     const { username, password } = req.body;
     const ip = req.ip;
-    console.log(req.socket.remoteAddress);
-    console.log(req.ip);
+
     try{
-       
-       
-    //    const previous = attempts.get(username);
-    //    //console.log(previous);
-    //    const now = Date.now();
-
-       
-    //    if(previous && now - previous.attemptedAt < WINDOW && previous.count > 5){
-    //         console.log(now - previous.attemptedAt , WINDOW , previous.count);
-    //         return next(new ApiError('You exceeed you limit. Please try again after some time', 429));
-    //    }
-
-        
        const result = await authServices.userLogin(username, password);
 
+       const accountDisabled = await userServices.getUserIsActive(username);
+
+       if(!accountDisabled){
+            throw new ApiError('Account is disabled/inactive', 403);
+       }
+       
        // Successful login: clear previous failures.
        await clearFailedLogins(username);
 
-       // attempts.delete(username);
        res.cookie("access_token", result.accessToken, {
         httpOnly: true,
         secure:true,
@@ -89,8 +80,6 @@ const loginController = async (req, res, next) => {
             }catch(error) {
                 return next(error);
             }
-            
-            //console.log(attempts);
         }
         return next(error);
     }

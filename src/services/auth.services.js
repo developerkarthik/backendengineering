@@ -59,7 +59,8 @@ const userLogin = async (username, password) => {
     const accessToken = generateJwtToken({ 
         sub: response[0].name, 
         role: roleRes.name, 
-        id: response[0].id
+        id: response[0].id,
+        is_active: response[0].is_active
     });
 
     const token_id = crypto.randomUUID();
@@ -133,6 +134,8 @@ const logoutAllSession = async (user_id) => {
 
     return true;
 }
+
+
 
 module.exports = {
     userLogin,

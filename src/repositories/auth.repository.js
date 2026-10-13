@@ -120,7 +120,7 @@ const getTokenDetail = async (user_id, token_id) => {
 
     const response = await pool.query(query, [user_id, token_id]);
 
-    console.log(response);
+    //console.log(response);
     return response.rows[0];
 }
 
