@@ -5,6 +5,7 @@ const { generateJwtToken, generateRefreshToken } = require('../utils/auth');
 const ApiError = require('../errors/ApiError');
 const jwt = require('jsonwebtoken');
 const crypto = require('node:crypto');
+const emailServices = require('../services/email.services');
 
 
 const regenerateTokens = async (id, jti) => {
@@ -136,6 +137,27 @@ const logoutAllSession = async (user_id) => {
 }
 
 
+const forgetPassword = async (username) => {
+    const user = await userRepository.getUserByName(username);
+    if(!user){
+        throw new ApiError('Username/Email ID is not correct', 401);
+    }
+
+    // generate raw token
+
+    const raw_token = crypto.randomBytes(32).toString('hex');
+
+    // generate token hash
+
+    const token_hash = crypto.createHash('SHA256').update(raw_token).digest('hex');
+
+    const tokenSaved = await authRepository.createResetPasswordToken(user.id, token_hash);
+
+    await emailServices.sendPasswordResetEmail(user.email, raw_token);
+    return true;
+
+}
+
 
 module.exports = {
     userLogin,
@@ -144,5 +166,6 @@ module.exports = {
     regenerateTokens,
     checkSessionValid,
     logoutSession,
-    logoutAllSession
+    logoutAllSession,
+    forgetPassword
 }

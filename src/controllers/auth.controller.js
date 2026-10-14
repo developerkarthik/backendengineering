@@ -46,7 +46,7 @@ const loginController = async (req, res, next) => {
        if(!accountDisabled){
             throw new ApiError('Account is disabled/inactive', 403);
        }
-       
+
        // Successful login: clear previous failures.
        await clearFailedLogins(username);
 
@@ -96,6 +96,20 @@ const registerController = async (req, res, next) => {
         next(error);
     }
 }
+
+const forgetPwdController = async (req, res, next) => {
+    const { username } = req.body;
+    try{
+        await authServices.forgetPassword(username);
+        
+        res.status(200).json({
+            message: 'Please check your email for reset password link.'
+        });
+
+    }catch(error){
+        next(error);
+    }
+} 
 
 const logoutController = async (req, res, next) => {
     try{
@@ -156,5 +170,6 @@ module.exports = {
     getUser,
     generateNewTokens,
     logoutController,
-    logoutAllController
+    logoutAllController,
+    forgetPwdController
 }

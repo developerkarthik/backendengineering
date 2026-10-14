@@ -16,6 +16,12 @@ const getUserById = async (userId) => {
     return response.rows.length > 0 ? response.rows[0] : null;
 }
 
+const getUserByName = async (username) => {
+    const query = `SELECT id,name, email, is_active FROM users WHERE name=$1`;
+    const response = await pool.query(query, [username]);
+    return response.rows.length > 0 ? response.rows[0] : null;
+}
+
 const getUserIsActive = async (username) => {
     const query = `SELECT id, is_active FROM users WHERE name=$1`;
     const response = await pool.query(query, [username]);
@@ -33,5 +39,6 @@ module.exports = {
     getAllUsers,
     getUserById,
     updateUserStatus,
-    getUserIsActive
+    getUserIsActive,
+    getUserByName
 }
