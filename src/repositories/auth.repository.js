@@ -156,6 +156,17 @@ const revokeTokenByUserId = async (user_id) => {
     return response;
 }
 
+const createResetPasswordToken = async (user_id, token_hash) => {
+    const expires_at = new Date(Date.now() + 15 * 1000 * 60);
+    // Date.now - ms timestamp
+    const query = `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3) RETURNING user_d`;
+
+    // we can use postgreSQL simpler verison
+    // INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, NOW() + INTERVAL '15 minutes')
+    const response = await pool.query(query, [user_id, token_hash, expires_at])
+
+    return response;
+}
 
 module.exports = {
     checkUser,
@@ -169,6 +180,7 @@ module.exports = {
     getTokenDetail,
     revokeTokenByFamilyId,
     revokeTokenByUserId,
-    getFamilyByUserIdAndToken
+    getFamilyByUserIdAndToken,
+    createResetPasswordToken
 }
 
