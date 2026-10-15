@@ -1,7 +1,7 @@
 const bcrypt = require('bcrypt');
 const authRepository = require('../repositories/auth.repository');
 const userRepository = require('../repositories/user.repository');
-const { generateJwtToken, generateRefreshToken } = require('../utils/auth');
+const { generateJwtToken, generateRefreshToken, cryptotTokenHashing } = require('../utils/auth');
 const ApiError = require('../errors/ApiError');
 const jwt = require('jsonwebtoken');
 const crypto = require('node:crypto');
@@ -149,11 +149,25 @@ const forgetPassword = async (username) => {
 
     // generate token hash
 
-    const token_hash = crypto.createHash('SHA256').update(raw_token).digest('hex');
+    const token_hash = cryptotTokenHashing(raw_token);
 
     const tokenSaved = await authRepository.createResetPasswordToken(user.id, token_hash);
 
     await emailServices.sendPasswordResetEmail(user.email, raw_token);
+    return true;
+}
+
+const resetPassword = async (receivedToken, hashPassword) => {
+
+    const receivedHash = cryptotTokenHashing(receivedToken);
+    const hashToken = await authRepository.getResetPasswordToken(receivedHash); 
+
+    if(!hashToken){
+        throw new ApiError('Your token is invalid/expired!', 403);
+    }
+
+    await authRepository.resetPasswordTransaction(hashToken.token_hash, hashToken.user_id, hashPassword);
+    
     return true;
 
 }
@@ -167,5 +181,6 @@ module.exports = {
     checkSessionValid,
     logoutSession,
     logoutAllSession,
-    forgetPassword
+    forgetPassword,
+    resetPassword
 }

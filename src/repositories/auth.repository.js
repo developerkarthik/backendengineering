@@ -159,13 +159,50 @@ const revokeTokenByUserId = async (user_id) => {
 const createResetPasswordToken = async (user_id, token_hash) => {
     const expires_at = new Date(Date.now() + 15 * 1000 * 60);
     // Date.now - ms timestamp
-    const query = `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3) RETURNING user_d`;
+    const query = `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)`;
 
     // we can use postgreSQL simpler verison
     // INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, NOW() + INTERVAL '15 minutes')
     const response = await pool.query(query, [user_id, token_hash, expires_at])
 
     return response;
+}
+
+
+const getResetPasswordToken = async (receivedHash) => {
+    const query = `SELECT * FROM password_reset_tokens WHERE token_hash=$1 
+                    AND expires_at > NOW()
+                    AND used_at IS NULL`;
+
+    const response = await pool.query(query, [receivedHash]);
+
+    return response.rows.length > 0 ? response.rows[0] : null;
+}
+
+const resetPasswordTransaction = async (receivedHash, user_id, newPassword) => {
+    const client = await pool.connect();
+
+    try{
+        await client.query('BEGIN');
+
+        // Update new password
+        const userQuery = `UPDATE users SET password=$1 WHERE id=$2`;
+        await client.query(userQuery, [newPassword,user_id]);
+
+        // Update token used at
+
+        const tokenQuery = `UPDATE password_reset_tokens SET used_at=NOW() WHERE token_hash=$1`;
+        await client.query(tokenQuery, [receivedHash]);
+
+        await client.query('COMMIT');
+        return true;
+    }catch(error){
+        await client.query('ROLLBACK');
+
+        throw error;
+    }finally{
+        client.release();
+    }
 }
 
 module.exports = {
@@ -181,6 +218,8 @@ module.exports = {
     revokeTokenByFamilyId,
     revokeTokenByUserId,
     getFamilyByUserIdAndToken,
-    createResetPasswordToken
+    createResetPasswordToken,
+    resetPasswordTransaction,
+    getResetPasswordToken
 }
 

@@ -1,5 +1,5 @@
 const express = require('express');
-const { loginController, registerController, getUser, generateNewTokens, logoutController, logoutAllController, forgetPwdController } = require('../controllers/auth.controller');
+const { loginController, registerController, getUser, generateNewTokens, logoutController, logoutAllController, forgetPwdController, resetPwdController } = require('../controllers/auth.controller');
 const { hashPassword, authenticate, validateRefreshToken } = require('../middleware/auth.middleware');
 const { generateCsrfToken, validateCsrfToken } = require('../middleware/csrf.middleware');
 const validateOrigin = require('../middleware/origin.middleware');
@@ -15,6 +15,8 @@ authRouter.post('/login', generateCsrfToken, loginController);
 authRouter.post('/register', hashPassword, registerController);
 
 authRouter.post('/forget-password', forgetPwdController);
+
+authRouter.post('/reset-password', hashPassword, resetPwdController);
 
 authRouter.get('/me', authenticate, getUser);
 
