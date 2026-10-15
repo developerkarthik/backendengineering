@@ -145,13 +145,13 @@ const revokeTokenByFamilyId = async (user_id, family_id) => {
     return response;
 }
 
-const revokeTokenByUserId = async (user_id) => {
+const revokeTokenByUserId = async (user_id, client = pool) => {
     const query = `UPDATE refresh_tokens SET revoked_at=NOW() 
                         WHERE user_id=$1 
                         AND revoked_at IS NULL 
                         AND expires_at > NOW()`;
 
-    const response = await pool.query(query, [user_id]);
+    const response = await client.query(query, [user_id]);
 
     return response;
 }
@@ -169,31 +169,40 @@ const createResetPasswordToken = async (user_id, token_hash) => {
 }
 
 
-const getResetPasswordToken = async (receivedHash) => {
+const getResetPasswordToken = async (receivedHash, client) => {
     const query = `SELECT * FROM password_reset_tokens WHERE token_hash=$1 
                     AND expires_at > NOW()
-                    AND used_at IS NULL`;
+                    AND used_at IS NULL
+                    FOR UPDATE`;
 
-    const response = await pool.query(query, [receivedHash]);
+    const response = await client.query(query, [receivedHash]);
 
     return response.rows.length > 0 ? response.rows[0] : null;
 }
 
-const resetPasswordTransaction = async (receivedHash, user_id, newPassword) => {
+const resetPasswordTransaction = async (receivedHash, newPassword) => {
     const client = await pool.connect();
 
     try{
         await client.query('BEGIN');
 
+        const hashToken = await getResetPasswordToken(receivedHash, client); 
+
+        if(!hashToken){
+            throw new ApiError('Your token is invalid/expired!', 403);
+        }
+
         // Update new password
         const userQuery = `UPDATE users SET password=$1 WHERE id=$2`;
-        await client.query(userQuery, [newPassword,user_id]);
+        await client.query(userQuery, [newPassword,hashToken.user_id]);
 
         // Update token used at
 
         const tokenQuery = `UPDATE password_reset_tokens SET used_at=NOW() WHERE token_hash=$1`;
         await client.query(tokenQuery, [receivedHash]);
 
+        await revokeTokenByUserId(hashToken.user_id, client);
+        
         await client.query('COMMIT');
         return true;
     }catch(error){

@@ -160,13 +160,9 @@ const forgetPassword = async (username) => {
 const resetPassword = async (receivedToken, hashPassword) => {
 
     const receivedHash = cryptotTokenHashing(receivedToken);
-    const hashToken = await authRepository.getResetPasswordToken(receivedHash); 
+    
 
-    if(!hashToken){
-        throw new ApiError('Your token is invalid/expired!', 403);
-    }
-
-    await authRepository.resetPasswordTransaction(hashToken.token_hash, hashToken.user_id, hashPassword);
+    await authRepository.resetPasswordTransaction(receivedHash, hashPassword);
     
     return true;
 
