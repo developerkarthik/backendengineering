@@ -28,8 +28,12 @@ const generateRefreshToken = (data) => {
     return refreshToken;
 }
 
+const cryptotTokenHashing = (cryptotoken) => {
+    return crypto.createHash('SHA256').update(cryptotoken).digest('hex');
+}
 
 module.exports = {
     generateJwtToken,
-    generateRefreshToken
+    generateRefreshToken,
+    cryptotTokenHashing
 }

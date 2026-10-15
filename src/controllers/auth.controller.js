@@ -105,7 +105,25 @@ const forgetPwdController = async (req, res, next) => {
         res.status(200).json({
             message: 'Please check your email for reset password link.'
         });
+    }catch(error){
+        next(error);
+    }
+} 
 
+const resetPwdController = async (req, res, next) => {
+    
+    try{
+        const { password } = req.body;
+        const token = req.query?.token;
+
+        if(!token){
+            throw new ApiError('Token is missing or not valid!', 403);
+        }
+        await authServices.resetPassword(token, password);
+        
+        res.status(200).json({
+            message: 'Your password updated successfully!.'
+        });
     }catch(error){
         next(error);
     }
@@ -171,5 +189,6 @@ module.exports = {
     generateNewTokens,
     logoutController,
     logoutAllController,
-    forgetPwdController
+    forgetPwdController,
+    resetPwdController
 }
