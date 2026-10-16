@@ -53,12 +53,13 @@ app.get('/', async (req, res) => {
     });
 });
 app.use('/auth', authRouter);
+app.use('/api/products', productRouter);
 
 app.use(validateOrigin);
 app.use(validateCsrfToken);
 
 
-app.use('/api/products', productRouter)
+
 app.use('/api/orders', orderRouter);
 
 

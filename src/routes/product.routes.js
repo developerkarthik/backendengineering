@@ -19,7 +19,8 @@ productRouter.put('/:id', validateProduct, updateProductById);
 
 
 // authentication requred
-productRouter.get('/:id', authenticate, getProductById);
+productRouter.get('/:id', getProductById);
+// productRouter.get('/:id', authenticate, getProductById);
 productRouter.post('/', authenticate, validateProduct, createProduct);
 productRouter.delete('/:id', authenticate, deleteProduct);
 
