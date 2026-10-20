@@ -33,35 +33,54 @@ const fetchProducts = async (filters, page, limit, sortBy, sortOrder) => {
     }
 }
 
+const inFlightRequests = new Map(); 
+
 const fetchProductById = async (productId) => {
     const cacheKey = `product:${productId}`;
 
     try{
         const cacheData = await redisCacheService.getProductCache(cacheKey);
-        if(!cacheData){
+        console.log('Cache Data:'+ cacheData);
+        if(cacheData){
             return JSON.parse(cacheData);
         }
     }catch(error){
-        console.error('Redis cache read failed:', error.message);
+         console.error('Redis cache read failed:', error.message);
     }
     
-
-    const result =  await productRepository.fetchProductById(productId);
-    
-    if(!result){
-        return null;
+    if (inFlightRequests.has(cacheKey)) {
+        return inFlightRequests.get(cacheKey);
     }
 
+    //console.log('Product get..');
+
+    const fetchPromise = (async () => {
+        const result =  await productRepository.fetchProductById(productId);
+        //console.log('Product get..');
+        //console.log(result);
+        if(!result){
+            return null;
+        }
+
+        try {
+            await redisCacheService.createProductCache(
+            cacheKey,
+            result
+            );
+        } catch (error) {
+            console.error('Redis cache write failed:', error.message);
+        }
+        return result;
+    })();
+
+    inFlightRequests.set(cacheKey, fetchPromise);
+    
     try {
-        await redisCacheService.createProductCache(
-        cacheKey,
-        result
-        );
-    } catch (error) {
-        console.error('Redis cache write failed:', error.message);
+        return await fetchPromise;
+    } finally {
+        inFlightRequests.delete(cacheKey);
     }
-
-    return result;
+    
 }
 
 const createProduct = async (productData) => {
@@ -79,12 +98,18 @@ const createProduct = async (productData) => {
 const updateProductById = async (productId, payload) => {
     const result = await productRepository.updateProductById(productId, payload);
     console.log(result);
-    const cacheKey = `product:${productId}`;
-    const cacheDel = await redisCacheService.deleteProductCache(cacheKey);
-    if(!cacheDel){
-        console.error('Redis cache is not delete. User may see stale data.');
-    }
 
+    try{
+        const cacheKey = `product:${productId}`;
+        const cacheDel = await redisCacheService.deleteProductCache(cacheKey);
+        console.log(cacheDel);
+        if(!cacheDel){
+            console.error('Redis cache is not delete. User may see stale data.');
+        }
+    }catch(error){
+        console.error('Cache invalidation failed', { productId, message: error.message});
+    }
+    
     return result;
 }
 

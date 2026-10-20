@@ -26,7 +26,6 @@ const getProducts = async (req, res, next) => {
     }
 }
 
-
 const getProductById = async (req, res, next) => {
     try {
         const productId = Number(req.params.id);
@@ -40,6 +39,7 @@ const getProductById = async (req, res, next) => {
 
         const product = await productServices.fetchProductById(productId);
 
+        console.log(product);
         if(!product){
             throw new ApiError(
                 "Product doesn't exists",
