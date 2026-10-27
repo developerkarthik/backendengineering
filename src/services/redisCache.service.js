@@ -14,8 +14,25 @@ const deleteProductCache = async (cacheKey) => {
     return await redisClient.del(cacheKey);
 }
 
+const incrementProductViews = (cacheKey) => {
+    return redisClient.incr(cacheKey);
+}
+
+const createProductUserViews = (productId, userId) => {
+    //console.log(productId, userId);
+    const key = `product:${productId}:viewers`;
+    return redisClient.sAdd(key, [`user:${String(userId)}`])
+}
+
+const getProductUserViews = (productId) => {
+    const key = `product:${productId}:viewers`;
+    return redisClient.sCard(key)
+}
+
 module.exports = {
     getProductCache,
     createProductCache,
-    deleteProductCache
+    deleteProductCache,
+    createProductUserViews,
+    getProductUserViews
 }

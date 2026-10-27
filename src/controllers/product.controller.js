@@ -29,6 +29,7 @@ const getProducts = async (req, res, next) => {
 const getProductById = async (req, res, next) => {
     try {
         const productId = Number(req.params.id);
+        const userId = req.user.id;
 
         if(Number.isNaN(productId) || productId < 0) {
             throw new ApiError(
@@ -37,9 +38,9 @@ const getProductById = async (req, res, next) => {
             );
         }
 
-        const product = await productServices.fetchProductById(productId);
+        const product = await productServices.fetchProductById(productId, userId);
 
-        console.log(product);
+        //console.log(product);
         if(!product){
             throw new ApiError(
                 "Product doesn't exists",
@@ -112,6 +113,20 @@ const deleteProduct = async (req, res, next) => {
 }
 
 
+const getProductUserViews = async (req, res, next) => {
+    
+    const productId = req.params.id;
+
+    try{
+        const result = await productServices.fetchProductUserViews(productId);
+        console.log(result);
+        res.status(200).json({
+            count: result
+        });
+    }catch(err){
+        next(err)
+    }
+}
 
 module.exports = {
     getProducts,
@@ -119,4 +134,5 @@ module.exports = {
     createProduct,
     updateProductById,
     deleteProduct,
+    getProductUserViews
 }
