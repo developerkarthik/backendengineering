@@ -2,6 +2,7 @@ const { MIN_PAGE_LIMIT, MAX_PAGE_LIMIT, DEFAULT_PAGE_LIMIT } = require('../const
 const ApiError = require('../errors/ApiError');
 const productRepository = require('../repositories/product.repository');
 const redisCacheService = require('../services/redisCache.service');
+const { withProductLock } = require('../utils/withProductLock');
 
 const fetchPaginationData = async (filters, page, limit) => {
     
@@ -35,52 +36,69 @@ const fetchProducts = async (filters, page, limit, sortBy, sortOrder) => {
 
 const inFlightRequests = new Map(); 
 
-const fetchProductById = async (productId) => {
-    const cacheKey = `product:${productId}`;
+const fetchProductById = async (productId, userId) => {
 
-    try{
-        const cacheData = await redisCacheService.getProductCache(cacheKey);
-        console.log('Cache Data:'+ cacheData);
-        if(cacheData){
-            return JSON.parse(cacheData);
+    //return withProductLock(productId, async () => {
+        const cacheKey = `product:${productId}`;
+        let product = null;
+
+        try{
+            const cacheData = await redisCacheService.getProductCache(cacheKey);
+            if(cacheData){
+                product = JSON.parse(cacheData);
+            }
+        }catch(error){
+            console.error('Redis cache read failed:', error.message);
         }
-    }catch(error){
-         console.error('Redis cache read failed:', error.message);
-    }
-    
-    if (inFlightRequests.has(cacheKey)) {
-        return inFlightRequests.get(cacheKey);
-    }
+        
+        if(!product){
+            const hasFlightRequests = inFlightRequests.has(cacheKey);
 
-    //console.log('Product get..');
+            if(!hasFlightRequests){
+                const fetchPromise = (async () => {
+                        const result =  await productRepository.fetchProductById(productId);
+                        if(!result){
+                            return null;
+                        }
 
-    const fetchPromise = (async () => {
-        const result =  await productRepository.fetchProductById(productId);
-        //console.log('Product get..');
-        //console.log(result);
-        if(!result){
-            return null;
+                        try {
+                            await redisCacheService.createProductCache(
+                            cacheKey,
+                            result
+                            );
+                        } catch (error) {
+                            console.error('Redis cache write failed:', error.message);
+                        }
+                        return result;
+                })();
+
+                inFlightRequests.set(cacheKey, fetchPromise);
+
+                try {
+                    product = await fetchPromise;
+                } finally {
+                    inFlightRequests.delete(cacheKey);
+                }
+
+            }else{
+                product = await inFlightRequests.get(cacheKey);
+            }
         }
+
+        if (!product) return null;
 
         try {
-            await redisCacheService.createProductCache(
-            cacheKey,
-            result
+            await redisCacheService.createProductUserViews(
+                productId,
+                userId
             );
         } catch (error) {
-            console.error('Redis cache write failed:', error.message);
+            console.error('Redis viewer tracking failed:', error.message);
         }
-        return result;
-    })();
 
-    inFlightRequests.set(cacheKey, fetchPromise);
-    
-    try {
-        return await fetchPromise;
-    } finally {
-        inFlightRequests.delete(cacheKey);
-    }
-    
+        return product;
+        
+    //});
 }
 
 const createProduct = async (productData) => {
@@ -96,25 +114,37 @@ const createProduct = async (productData) => {
 }
 
 const updateProductById = async (productId, payload) => {
-    const result = await productRepository.updateProductById(productId, payload);
-    console.log(result);
 
-    try{
-        const cacheKey = `product:${productId}`;
-        const cacheDel = await redisCacheService.deleteProductCache(cacheKey);
-        console.log(cacheDel);
-        if(!cacheDel){
-            console.error('Redis cache is not delete. User may see stale data.');
+    return await withProductLock(productId, async () => {
+        const result = await productRepository.updateProductById(productId, payload);
+        if (!result) {
+            return null;
         }
-    }catch(error){
-        console.error('Cache invalidation failed', { productId, message: error.message});
-    }
-    
-    return result;
+
+        try{
+            const cacheKey = `product:${productId}`;
+            const cacheDel = await redisCacheService.deleteProductCache(cacheKey);
+            if(!cacheDel){
+                console.error('Redis cache is not delete. User may see stale data.');
+            }
+        }catch(error){
+            console.error('Cache invalidation failed', { productId, message: error.message});
+        }
+        
+        return result;
+    });
 }
 
 const deleteProduct = async (productId) => {
     return await productRepository.deleteProduct(productId);
+}
+
+const fetchProductUserViews = async (productId) => {
+    try{
+        return await redisCacheService.getProductUserViews(productId);
+    }catch(error){
+        throw error;
+    }
 }
 
 module.exports = {
@@ -122,5 +152,6 @@ module.exports = {
     fetchProductById,
     createProduct,
     updateProductById,
-    deleteProduct
+    deleteProduct,
+    fetchProductUserViews
 }

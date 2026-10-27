@@ -40,6 +40,7 @@ app.use((req, res, next) => {
 
     res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
     res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-CSRF-Token");
     
     if(req.method === 'OPTIONS'){
@@ -53,13 +54,13 @@ app.get('/', async (req, res) => {
     });
 });
 app.use('/auth', authRouter);
-app.use('/api/products', productRouter);
+
 
 app.use(validateOrigin);
 app.use(validateCsrfToken);
 
 
-
+app.use('/api/products', productRouter);
 app.use('/api/orders', orderRouter);
 
 
